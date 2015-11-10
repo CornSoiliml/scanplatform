@@ -1,0 +1,271 @@
+#!/usr/bin/expect
+#
+# ----------------------------------------------------------------------------------------------------------
+# an expect-script for server config and vulnerabilities on CentOS, packages need to be installed by yum	|
+# run by check.sh if users have choosen config check and submitted SSH info 								|
+# scan via SSH-login and command execution. Thus, you have to ensure connection to server being checked  	|
+# you can add/delete your preference check options or more vulnerabilities if needed						|
+# you can also copy poc file to remote server and catch the result it runs, that will be more specific		|
+# however you should warn user about authority needed														|
+# ----------------------------------------------------------------------------------------------------------
+# 
+set timeout 15
+set ip [lindex $argv 0]
+set user [lindex $argv 1]
+set password [lindex $argv 2]
+
+#-----------------try login and accept key, if accepted, input password-----------------
+spawn ssh $user@$ip
+expect {
+    "(yes/no)?" {
+        send "yes\n"
+        expect "assword:"
+        send "$key\n"
+    }
+        "assword:" {
+        send "$password\n"
+    }
+}
+expect "#"
+send "echo \"</p>\"\n"
+expect "#"
+
+#-----------------show disk storage-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 主机存储情况如下:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"  \"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "df -h\n"
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+send "echo \"<ul>\"\n"
+expect "#"
+
+#-----------------show memory used-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 主机当前内存使用状况:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"  \"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "free\n"
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+send "echo \"<ul>\"\n"
+expect "#"
+
+#-----------------show users without password-----------------
+send "echo \"<li> 主机上的无密码用户,注意甄别<strong>非服务用户</strong>:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+#send "cat /etc/passwd | awk -F: '{print \$1}'\n"
+send "grep \"\\\!\\\!\" /etc/shadow | awk -F':' '{print \$1}'\n"
+expect "#"
+send "echo \"</font></p></td></tr></table>\"\n"
+expect "#"
+
+#-----------------show last 5 login info-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 最近的5位登录用户信息,<strong>警惕不可信IP</strong>:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "echo\n"
+expect "#"
+send "last -n 5 | awk '{print \$1,\$3,\$4,\$5,\$6,\$7,\$8,\$9}'\n"
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+
+#-----------------show present ntp server-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 主机当前NTP服务器，请使用公司NTP服务器<strong>10.1.xx.xx</strong>:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "cat /etc/ntp.conf | grep server | sed '/#/d'\n"
+expect "#"
+send " "
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+
+#-----------------show iptables-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 主机的iptables配置信息如下,开启防火墙更安全：</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "service iptables status\n"
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+
+#-----------------show service authority-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 敏感文件权限信息,请确保<strong>属主为root</strong>：</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "echo \" 文件属性 | 属主| 属主用户组--\"\n"
+expect "#"
+send "cd /etc/\n"
+expect "#"
+send "ls -l | grep services | awk '{print \$1,\$3,\$4}'\n"
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>\"\n"
+expect "#"
+send "echo \"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>文件权限为root则为安全！</strong></p></td></tr></table>\"\n"
+expect "#"
+
+#-----------------show present connection-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 当前主机连接信息，警惕<strong>陌生连接</strong>:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send " "
+expect "#"
+send "netstat -a | grep ESTA | grep tcp | sed '/::/d'\n"
+expect "#"
+send "echo \"</font></code></pre></td></tr></table>\"\n"
+expect "#"
+
+#-----------------check web server conf-----------------
+#-----------------tomcat safe conf-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 检测<strong>tomcat</strong>安全配置:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "cat `locate server.xml` | grep ssl\n"
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>请在server.xml中sslProtocol项后指定sslEnabledProtocols=\\\"TLSv1\\\"，如无tomcat请忽略</strong></p></td></tr></table>\"\n"
+expect "#"
+
+#-----------------apache safe conf-----------------
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 检测<strong>Apache</strong>安全配置:</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "cat `locate httpd.conf` | grep Trace\n"
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>请在httpd.conf中指定TraceEnable off，如无apache请忽略</strong></p></td></tr></table>\"\n"
+expect "#"
+
+
+#-----------------check high-threat vulnerabilities-----------------
+send "echo \"<hr />\"\n"
+expect "#"
+send "echo \"<ul>\"\n"
+expect "#"
+send "echo \"<li> 高危漏洞检测信息：</li>\"\n"
+expect "#"
+send "echo \"</ul>\"\n"
+expect "#"
+
+#-----------------glibc-----------------
+send "echo \"<table><tr><td><pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "rpm -q --changelog glibc | grep -B 1 CVE-2015-0235\n"
+expect "#"
+send " "
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>\"\n"
+expect "#"
+send "echo \"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>主机的glibc库修复情况如上，如空，请使用yum升级！yum update glibc</strong>\"\n"
+expect "#"
+send "echo \"</p>\"\n"
+expect "#"
+
+#-----------------bash-----------------
+send "echo \"<pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "rpm -q --changelog bash | grep -B 1 CVE-2014-7169\n"
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>\"\n"
+expect "#"
+send "echo \"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>主机的bash修复情况如上，如空，请使用yum升级！yum update bash</strong>\"\n"
+expect "#"
+send "echo \"</p>\"\n"
+expect "#"
+
+#-----------------openssl-----------------
+send "echo \"<pre style=\\\"background-color:WhiteSmoke;\\\"><code><font face=\\\"Verdana\\\">\"\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2014-0160\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-1789\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-1791\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-3216\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-0286\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-0204\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-0206\n"
+expect "#"
+send "rpm -q --changelog openssl | grep -B 1 CVE-2015-3216\n"
+expect "#"
+send "echo \"</font></code></pre>\"\n"
+expect "#"
+send "echo \"<p>\"\n"
+expect "#"
+send "echo \"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>主机的openssl漏洞修复情况如上！</strong></p></td></tr></table>\"\n"
+
+
+expect "#"
+send "echo \"<p>&nbsp;&nbsp;&nbsp;&nbsp;\"\n"
+
+expect "#"
+send "exit\n"
+expect eof
